@@ -11,6 +11,7 @@ Encoding(clean_input)<-"UTF-8"
 clean_input<-gsub("<COREF CAD= IDE=>","",clean_input,fixed=TRUE)
 clean_input<-gsub("</coref>","",clean_input,fixed=TRUE)
 clean_input
+#Parsing
 # POS Tagging
 library(NLP)
 library(openNLP)
@@ -53,9 +54,25 @@ annotate(s,entity_annotator,a2)
 ## Directly:
 entity_annotator(s,a2)
 ## And slice ...
-s[entity_annotator(s, a2)]
+entity_list<-s[entity_annotator(s, a2)]
+entity_list<-as.list(entity_list)
 ## Variant with sentence probabilities as features.
 #annotate(s, Maxent_Entity_Annotator(language="es",probs = TRUE), a2)
 
 
+install.packages("udpipe")
+library(udpipe)
+udmodel<-udpipe_download_model(language="spanish")
+vignette("udpipe-tryitout",package="udpipe")
+vignette("udpipe-annotation", package="udpipe")
+vignette("udpipe-train",package="udpipe")
+vignette("udpipe-usecase-postagging-lemmatisation",package="udpipe")
+vignette("udpipe-usecase-topicmodelling",package="udpipe")
+
+udmodel
+udmodel_spanish<-udpipe_load_model(file="spanish-ud-2.0-170801.udpipe")
+clean_input<-as.vector(clean_input)
+x<-udpipe_annotate(udmodel_spanish,clean_input)
+x<-as.data.frame(x)
+x
 
