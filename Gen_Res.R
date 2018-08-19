@@ -10,7 +10,6 @@ Encoding(clean_input)<-"UTF-8"
 
 clean_input<-gsub("<COREF CAD= IDE=>","",clean_input,fixed=TRUE)
 clean_input<-gsub("</coref>","",clean_input,fixed=TRUE)
-clean_input
 #Parsing
 # POS Tagging
 #library(NLP)
@@ -69,14 +68,13 @@ library(udpipe)
 #vignette("udpipe-usecase-postagging-lemmatisation",package="udpipe")
 #vignette("udpipe-usecase-topicmodelling",package="udpipe")
 
-udmodel
+#udmodel
 udmodel_spanish<-udpipe_load_model(file="spanish-ud-2.0-170801.udpipe")
 clean_input<-as.vector(clean_input)
 x<-udpipe_annotate(udmodel_spanish,clean_input)
 x<-as.data.frame(x)
 #This function adds the parent info to the annotated data.frame
 x<-cbind_dependencies(x,type=c("parent","child"))
-x
 #Frecuencia de POS tags
 library(lattice)
 stats<-txt_freq(x$upos)
@@ -89,13 +87,6 @@ stats<-txt_freq(stats$token)
 stats$key<-factor(stats$key,levels=rev(stats$key))
 barchart(key~freq,data=head(stats,20),col="cadetblue",main="Most ocurring proper nouns",xlab="Frequency")
 
-## Uso de RAKE para extraer keywords
-stats <- keywords_rake(x = x, term = "lemma", group = "doc_id", 
-                       relevant = x$upos %in% c("NOUN", "ADJ"))
-stats$key <- factor(stats$keyword, levels = rev(stats$keyword))
-barchart(key ~ rake, data = head(subset(stats, freq > 3), 20), col = "cadetblue", 
-         main = "Keywords identified by RAKE", 
-         xlab = "Rake")
 #Co-ocurrencias
 cooc<-cooccurrence(x = subset(x, upos %in% c("NOUN", "ADJ")), 
                      term = "lemma", 
@@ -149,5 +140,7 @@ wordcloud(words = stats$key, freq = stats$freq, min.freq = 3, max.words = 100,
 ##Subset de proper nouns, nouns y pronombres.
 stats<-subset(x,upos %in% c("PROPN","NOUN","PRON"))
 freq_stats<-txt_freq(stats$token)
-
-
+library(dplyr)
+stats_subset<-select(stats,token,upos)
+stats_subset<-stats_subset %>% mutate(id = row_number())
+stats_subset<-stats_subset[,c(3,1,2)]
