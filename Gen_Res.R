@@ -144,3 +144,4 @@ library(dplyr)
 stats_subset<-select(stats,token,upos)
 stats_subset<-stats_subset %>% mutate(id = row_number())
 stats_subset<-stats_subset[,c(3,1,2)]
+####
