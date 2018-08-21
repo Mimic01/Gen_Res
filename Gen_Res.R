@@ -139,9 +139,21 @@ wordcloud(words = stats$key, freq = stats$freq, min.freq = 3, max.words = 100,
 #####################################################
 ##Subset de proper nouns, nouns y pronombres.
 stats<-subset(x,upos %in% c("PROPN","NOUN","PRON"))
-freq_stats<-txt_freq(stats$token)
 library(dplyr)
 stats_subset<-select(stats,token,upos)
-stats_subset<-stats_subset %>% mutate(id = row_number())
+stats_subset$uid <- sprintf("S%003d", 1:nrow(stats_subset))
 stats_subset<-stats_subset[,c(3,1,2)]
-####
+#subset de las primeras 100 filas
+stats_subset2<-stats_subset[1:100,]
+mat<-matrix(1,100,100)
+rownames(mat)<-colnames(mat)<-stats_subset2$uid
+library(igraph)
+g<-graph.adjacency(mat)
+linking<-get.edgelist(g)
+linking<-as.data.frame(linking)
+nodeses<-stats_subset2
+net<-graph_from_data_frame(d=linking, vertices=nodeses, directed=T)
+#we remove loops
+net<-simplify(net,remove.multiple=FALSE,remove.loops=TRUE) 
+
+plot(net, edge.arrow.size=.4,vertex.label=NA)
