@@ -153,7 +153,10 @@ linking<-get.edgelist(g)
 linking<-as.data.frame(linking)
 nodeses<-stats_subset2
 net<-graph_from_data_frame(d=linking, vertices=nodeses, directed=T)
+#Edges/Links of the nerwork
+E(net)
+#Vertices of the nerwork
+V(net)
 #we remove loops
-net<-simplify(net,remove.multiple=FALSE,remove.loops=TRUE) 
-
-plot(net, edge.arrow.size=.4,vertex.label=NA)
+net<-simplify(net,remove.multiple=F,remove.loops=T)  
+plot(net,edge.arrow.size=.1,vertex.label=NA)
