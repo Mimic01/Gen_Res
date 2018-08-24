@@ -172,3 +172,6 @@ library(stringr)
 feat_node<-str_split_fixed(nodes$feats, "\\|", 6)
 feat_node<-sub("^$",NA,feat_node)
 feat_node<-as.data.frame(feat_node,stringsAsFactors=FALSE)
+feat_node
+colnames(linking)<-c("ID1","ID2","token","upos")
+linking<-cbind(linking,feat_node)
