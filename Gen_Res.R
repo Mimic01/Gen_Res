@@ -140,7 +140,7 @@ wordcloud(words = stats$key, freq = stats$freq, min.freq = 3, max.words = 100,
 stats<-subset(x,upos %in% c("PROPN","NOUN","PRON"))
 library(dplyr)
 stats_subset<-select(stats,token,upos,feats)
-stats_subset$uid <- sprintf("S%003d", 1:nrow(stats_subset))
+stats_subset$uid<-sprintf("S%003d", 1:nrow(stats_subset))
 stats_subset<-stats_subset[,c(4,1,2,3)]
 #subset de las primeras 100 filas
 stats_subset2<-stats_subset[1:100,]
@@ -172,6 +172,24 @@ library(stringr)
 feat_node<-str_split_fixed(nodes$feats, "\\|", 6)
 feat_node<-sub("^$",NA,feat_node)
 feat_node<-as.data.frame(feat_node,stringsAsFactors=FALSE)
-feat_node
-colnames(linking)<-c("ID1","ID2","token","upos")
+feat_node$uid<-sprintf("S%003d", 1:nrow(feat_node))
+feat_node<-feat_node[,c(7,1,2,3,4,5,6)]
+colnames(feat_node)<-c("uid","f1","f2","f3","f4","f5","f6")
+colnames(linking)<-c("from","to","token","upos","f1","f2","f3","f4","f5","f6")
 linking<-cbind(linking,feat_node)
+
+#compara
+feat_node$f1[1]
+#con
+feat_node$f1[2]
+feat_node$f2[2]
+feat_node$f3[2]
+feat_node$f4[2]
+feat_node$f5[2]
+feat_node$f6[2]
+#hasta feat_node$f6[100]
+feat_node$f6[100]
+#recien ahi pasa a compara feat_node$f2[1] con todos
+if(identical(feat_node$f1[1],feat_node$f1[6])){
+  print("yes!")
+}
