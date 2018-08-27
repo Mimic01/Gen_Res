@@ -1,0 +1,37 @@
+Matias
+borrar links, #, @ al principio y caracteres raros
+###
+8,921 entries
+stats_subset deberia ser mi vertices = nodes
+ahora tengo que crear una matrix de adjacency
+graph_from_adjacency_matrix()
+############
+
+To Do's:
+
+X- arreglar los IDs de los nodos
+X- crear una matriz X x Y, ambos indices compuestos por los IDs de cada nodo
+X- llenar la matrix de 1 (TRUE)
+X- graficar el network
+- unir entidades (por flat)
+	if(3 flats seguidos){unir las 3 filas}
+		if(2 flats seguidos){unir las 2 filas}
+			if(PROPN){feats=algo}<- por si el feat es NA
+X- definir largo de cromosomas (6)
+X+ añadir columnas atributos a linking desde nodes
+X+ del set stats extraer dependency parsing y otros necesarios para restricciones y heuristicas
+X+ aprender a extraer dependency de la lista-> por ejemplo nodes[[4]][1] saca de columna 4 (dependency) fila 1.
+X+LEER PDF HANDLING AND PROCESSING STRINGS SET OPERATIONS-> nodes[[4]][1] %in% nodes[[4]][6] -> TRUE
+X+ cambiar nombre columnas a linking para que no choquen (v1, v2, etc)
+X+ agregar columnas de feats descompuestos a linking
+X+Descomponer los feats en distintas columnas para comparar uno a uno
++ crear condicion que compare dependency
+	+ asignar pesos a los edges segun la comparacion
+	+ borrar la conexion(edge) si se cumple una restriccion
+
+
+
+
+- programar restricciones
+- programar heuristicas para asignar los pesos
+- GA
