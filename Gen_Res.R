@@ -4,10 +4,10 @@ library(coreNLP)
 library(openNLP)
 
 setwd("C:/Users/Mimic03/Documents/GA_AR/Corpus")
+#setwd("C:/Users/Alex/Documents/GA_AR/Corpus")
 filename<-"clean_tweet_input.txt"
 clean_input<-paste(scan(filename,what="character",sep=NULL),collapse=" ")
 Encoding(clean_input)<-"UTF-8"
-
 clean_input<-gsub("<COREF CAD= IDE=>","",clean_input,fixed=TRUE)
 clean_input<-gsub("</coref>","",clean_input,fixed=TRUE)
 #Parsing
@@ -28,13 +28,13 @@ clean_input<-gsub("</coref>","",clean_input,fixed=TRUE)
 #   pos_tag_annotator<-Maxent_POS_Tag_Annotator()
 #   y1<-annotate(x,list(sent_token_annotator,word_token_annotator))
 #   y2<-annotate(x,pos_tag_annotator,y1)
-   # y3 <- annotate (x, Maxent_POS_Tag_Annotator ( probs = TRUE ),y1)
+# y3 <- annotate (x, Maxent_POS_Tag_Annotator ( probs = TRUE ),y1)
 # y2w<-subset(y2,type=="word")
 # tags<-sapply(y2w$features,'[[',"POS")
 # r1<-sprintf("%s/%s",x[y2w],tags)
 # r2<-paste(r1,collapse=" ")
 # return(r2) })
- 
+
 # POS Tagged Corpus
 #corpus.tagged
 # NER
@@ -89,8 +89,8 @@ barchart(key~freq,data=head(stats,20),col="cadetblue",main="Most ocurring proper
 
 #Co-ocurrencias
 cooc<-cooccurrence(x = subset(x, upos %in% c("NOUN", "ADJ")), 
-                     term = "lemma", 
-                     group = c("doc_id", "paragraph_id", "sentence_id"))
+                   term = "lemma", 
+                   group = c("doc_id", "paragraph_id", "sentence_id"))
 head(cooc)
 library(igraph)
 library(ggraph)
@@ -125,10 +125,10 @@ cat(as_conllu(x),file=file("annotations.conllu",encoding="UTF-8"))
 
 #Extraccion de keywords usando dependency parsing
 stats<-merge(x, x, 
-               by.x = c("doc_id", "paragraph_id", "sentence_id", "head_token_id"),
-               by.y = c("doc_id", "paragraph_id", "sentence_id", "token_id"),
-               all.x = TRUE, all.y = FALSE, 
-               suffixes = c("", "_parent"), sort = FALSE)
+             by.x = c("doc_id", "paragraph_id", "sentence_id", "head_token_id"),
+             by.y = c("doc_id", "paragraph_id", "sentence_id", "token_id"),
+             all.x = TRUE, all.y = FALSE, 
+             suffixes = c("", "_parent"), sort = FALSE)
 stats <- subset(stats, dep_rel %in% "nsubj" & upos %in% c("NOUN") & upos_parent %in% c("ADJ"))
 stats$term <- paste(stats$lemma_parent, stats$lemma, sep = " ")
 stats <- txt_freq(stats$term)
@@ -140,9 +140,9 @@ wordcloud(words = stats$key, freq = stats$freq, min.freq = 3, max.words = 100,
 ##Subset de proper nouns, nouns y pronombres.
 stats<-subset(x,upos %in% c("PROPN","NOUN","PRON"))
 library(dplyr)
-stats_subset<-select(stats,token,upos)
-stats_subset$uid <- sprintf("S%003d", 1:nrow(stats_subset))
-stats_subset<-stats_subset[,c(3,1,2)]
+stats_subset<-select(stats,token,upos,feats)
+stats_subset$uid<-sprintf("S%003d", 1:nrow(stats_subset))
+stats_subset<-stats_subset[,c(4,1,2,3)]
 #subset de las primeras 100 filas
 stats_subset2<-stats_subset[1:100,]
 mat<-matrix(1,100,100)
@@ -151,12 +151,73 @@ library(igraph)
 g<-graph.adjacency(mat)
 linking<-get.edgelist(g)
 linking<-as.data.frame(linking)
-nodeses<-stats_subset2
-net<-graph_from_data_frame(d=linking, vertices=nodeses, directed=T)
+nodes<-stats_subset2
+linking$token<-nodes$token
+linking$upos<-nodes$upos
+#linking$fromPos<-nodeses$upos
+net<-graph_from_data_frame(d=linking,vertices=nodes,directed=T)
 #Edges/Links of the nerwork
 E(net)
 #Vertices of the nerwork
 V(net)
 #we remove loops
 net<-simplify(net,remove.multiple=F,remove.loops=T)  
-plot(net,edge.arrow.size=.1,vertex.label=NA)
+plot(net,edge.arrow.size=.1,vertex.label=V(net)$token,vertex.shape="none")
+##The proportion of present edges from all possible edges in the network (for a directed network)
+#ecount(net)/(vcount(net)*(vcount(net)-1))
+#imprime una matrix de direcciones de nodos
+ends(net,es=E(net),names=F)
+
+library(stringr)
+#separamos feats y creamos nuevas columnas de ellos 1 a 1
+feat_node<-str_split_fixed(nodes$feats, "\\|", 6)
+feat_node<-sub("^$",NA,feat_node)
+feat_node<-as.data.frame(feat_node,stringsAsFactors=FALSE)
+feat_node$uid<-sprintf("S%003d", 1:nrow(feat_node))
+feat_node<-feat_node[,c(7,1,2,3,4,5,6)]
+colnames(feat_node)<-c("uid","f1","f2","f3","f4","f5","f6")
+linking<-cbind(linking,feat_node)
+colnames(linking)<-c("from","to","token","upos","uid","f1","f2","f3","f4","f5","f6")
+#comparaciones y pesos
+for(i in 1:NROW(linking)){
+  temp_from<-linking$from[i]
+  temp_to<-linking$to[i]
+  for(j in 1:NROW(feat_node)){
+    if(temp_from==feat_node$uid[j]){
+      feat_from<-feat_node[j,1]
+    }
+    if(temp_to==feat_node$uid[j]){
+      feat_to<-feat_node$uid[j]
+    }
+  }
+  sumpoint<-0
+  for(s in 2:7){
+    for(m in 2:7){
+      if(is.na(id_from[,s]) | is.na(id_to[,m])){
+        print("Is NA")
+      }else if(identical(feat_from[,s],feat_to[,m])){
+        print("TRUE!")
+        sumpoint<-sumpoint+0.1
+      }else{print("FALSE!")}
+    }
+  }
+}
+for(i in 1:NROW(feat_node)){          
+id_from<-feat_node[i,]
+for(j in 1:100){
+id_to<-feat_node[j,]
+sumpoint<-0
+for(s in 2:7){
+  for(m in 2:7){
+    if(is.na(id_from[,s]) | is.na(id_to[,m])){
+      print("Is NA")
+    }else if(identical(id_from[,s],id_to[,m])){
+      print("TRUE!")
+      sumpoint<-sumpoint+0.1
+    }else{print("FALSE!")}
+      }
+    }
+
+  }
+}
+sumpoint
