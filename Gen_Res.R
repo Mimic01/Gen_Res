@@ -3,8 +3,8 @@ library(stringr)
 library(coreNLP)
 library(openNLP)
 
-setwd("C:/Users/Mimic03/Documents/GA_AR/Corpus")
-#setwd("C:/Users/Alex/Documents/GA_AR/Corpus")
+#setwd("C:/Users/Mimic03/Documents/GA_AR/Corpus")
+setwd("C:/Users/Alex/Documents/GA_AR/Corpus")
 filename<-"clean_tweet_input.txt"
 clean_input<-paste(scan(filename,what="character",sep=NULL),collapse=" ")
 Encoding(clean_input)<-"UTF-8"
@@ -202,22 +202,26 @@ for(i in 1:NROW(linking)){
     }
   }
 }
-for(i in 1:NROW(feat_node)){          
-id_from<-feat_node[i,]
-for(j in 1:100){
-id_to<-feat_node[j,]
-sumpoint<-0
-for(s in 2:7){
-  for(m in 2:7){
-    if(is.na(id_from[,s]) | is.na(id_to[,m])){
-      print("Is NA")
-    }else if(identical(id_from[,s],id_to[,m])){
-      print("TRUE!")
-      sumpoint<-sumpoint+0.1
-    }else{print("FALSE!")}
+
+
+output<-matrix(ncol=1,nrow=NROW(linking))
+for(i in 1:NROW(linking)){          
+  id_from<-feat_node[i,]
+  for(j in 1:100){
+    id_to<-feat_node[j,]
+    sumpoint<-0
+    for(s in 2:7){
+      for(m in 2:7){
+        if(is.na(id_from[,s]) | is.na(id_to[,m])){
+          print("Is NA")
+        }else if(identical(id_from[,s],id_to[,m])){
+          print("TRUE!")
+          sumpoint<-sumpoint+0.1
+        }else{print("FALSE!")}
       }
     }
-
   }
+output[i,]<-sumpoint
 }
-sumpoint
+output
+as.data.frame(output)
