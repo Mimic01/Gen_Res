@@ -1,0 +1,81 @@
+rm(list = ls(all = TRUE))
+library(readr)
+library(stringr)
+library(coreNLP)
+library(openNLP)
+
+setwd("C:/Users/Mimic03/Documents/GA_AR/Corpus")
+#setwd("C:/Users/Alex/Documents/GA_AR/Corpus")
+filename<-"clean_tweet_input.txt"
+clean_input<-paste(scan(filename,what="character",sep=NULL),collapse=" ")
+Encoding(clean_input)<-"UTF-8"
+clean_input<-gsub("<COREF CAD= IDE=>","",clean_input,fixed=TRUE)
+clean_input<-gsub("</coref>","",clean_input,fixed=TRUE)
+library(udpipe)
+#udmodel
+udmodel_spanish<-udpipe_load_model(file="spanish-ud-2.0-170801.udpipe")
+clean_input<-as.vector(clean_input)
+x<-udpipe_annotate(udmodel_spanish,clean_input)
+x<-as.data.frame(x)
+#This function adds the parent info to the annotated data.frame
+x<-cbind_dependencies(x,type=c("parent","child"))
+#####################################################
+##Subset de proper nouns, nouns y pronombres.
+stats<-subset(x,upos %in% c("PROPN","NOUN","PRON"))
+library(dplyr)
+stats_subset<-select(stats,token,upos,feats)
+stats_subset$uid<-sprintf("S%003d", 1:nrow(stats_subset))
+stats_subset<-stats_subset[,c(4,1,2,3)]
+#subset de las primeras 100 filas
+stats_subset2<-stats_subset[1:100,]
+mat<-matrix(1,100,100)
+rownames(mat)<-colnames(mat)<-stats_subset2$uid
+library(igraph)
+g<-graph.adjacency(mat)
+linking<-get.edgelist(g)
+linking<-as.data.frame(linking)
+nodes<-stats_subset2
+linking$token<-nodes$token
+linking$upos<-nodes$upos
+#linking$fromPos<-nodeses$upos
+net<-graph_from_data_frame(d=linking,vertices=nodes,directed=T)
+#we remove loops
+net<-simplify(net,remove.multiple=F,remove.loops=T)  
+plot(net,edge.arrow.size=.1,vertex.label=V(net)$token,vertex.shape="none")
+
+
+#crea matrix de adj
+adj_net<-as_adj(net)
+adjmat_net<-as.matrix(adj_net)
+
+library(stringr)
+#separamos feats y creamos nuevas columnas de ellos 1 a 1
+feat_node<-str_split_fixed(nodes$feats, "\\|", 6)
+feat_node<-sub("^$",NA,feat_node)
+feat_node<-as.data.frame(feat_node,stringsAsFactors=FALSE)
+feat_node$uid<-sprintf("S%003d", 1:nrow(feat_node))
+feat_node<-feat_node[,c(7,1,2,3,4,5,6)]
+colnames(feat_node)<-c("uid","f1","f2","f3","f4","f5","f6")
+linking<-cbind(linking,feat_node)
+colnames(linking)<-c("from","to","token","upos","uid","f1","f2","f3","f4","f5","f6")
+#comparaciones y pesos
+output<-matrix(ncol=1,nrow=NROW(linking))
+for(i in 1:NROW(linking)){          
+  id_from<-feat_node[i,]
+  for(j in 1:100){
+    id_to<-feat_node[j,]
+    sumpoint<-0
+    for(s in 2:7){
+      for(m in 2:7){
+        if(is.na(id_from[,s]) | is.na(id_to[,m])){
+          print("Is NA")
+        }else if(identical(id_from[,s],id_to[,m])){
+          print("TRUE!")
+          sumpoint<-sumpoint+0.1
+        }else{print("FALSE!")}
+      }
+    }
+  }
+  output[i,]<-sumpoint
+}
+as.data.frame(output)
