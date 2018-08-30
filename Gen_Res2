@@ -6,7 +6,7 @@ library(openNLP)
 
 #setwd("C:/Users/Mimic03/Documents/GA_AR/Corpus")
 setwd("C:/Users/Alex/Documents/GA_AR/Corpus")
-filename<-"clean_tweet_input.txt"
+filename<-"clean_tweet_input_2.txt"
 clean_input<-paste(scan(filename,what="character",sep=NULL),collapse=" ")
 Encoding(clean_input)<-"UTF-8"
 clean_input<-gsub("<COREF CAD= IDE=>","",clean_input,fixed=TRUE)
@@ -55,36 +55,30 @@ linking<-cbind(linking,feat_node)
 colnames(linking)<-c("from","to","token","upos","uid","f1","f2","f3","f4","f5","f6")
 #comparaciones y pesos
 #quizas output deberia ser 2x2 para generar una matrix de adj
-output<-matrix(ncol=1,nrow=NROW(linking))
-for(i in 1:NROW(linking)){          
-  progress(i,progress.bar=TRUE)
-  if(i==NROW(linking)){cat("Done!\n")}
-  
-  feat_from<-feat_node[i,]
-  for(j in 1:25){
-    feat_to<-feat_node[j,]
-    sumpoint<-0
-    for(s in 2:7){
-      for(m in 2:7){
-        if(is.na(feat_from[,s]) | is.na(feat_to[,m])){
-          #print("Is NA")
-        }else if(identical(feat_from[,s],feat_to[,m])){
-          #print("TRUE!")
-          sumpoint<-sumpoint+0.1
-        }else{
-          #print("FALSE!")
-          }
-      }
-    }
-  }
-  output[i,]<-sumpoint
-}
-as.data.frame(output)
-
+#redefine el valor en la fila 1 columna 2 de la matrix de adj
+#adjmat_net[1,2]<-32
 #crea matrix de adj
 adj_net<-as_adj(net)
 adjmat_net<-as.matrix(adj_net)
-
+library(svMisc)
+sumpoint<-0
+for(i in 1:NROW(adjmat_net)){
+  progress(i,progress.bar=TRUE)
+  if(i==NROW(linking)){cat("Done!\n")}
+  for(j in 1:NROW(adjmat_net)){
+    if("Gender=Masc" %in% feat_node[i,] & "Gender=Masc" %in% feat_node[j,]){
+      sumpoint<-sumpoint+0.4
+    }else if("Gender=Fem" %in% feat_node[i,] & "Gender=Fem" %in% feat_node[j,]){
+      sumpoint<-sumpoint+0.4
+    }else if("Number=Plur" %in% feat_node[i,] & "Number=Plur" %in% feat_node[j,]){
+      sumpoint<-sumpoint+0.4
+    }else if("Number=Sing" %in% feat_node[i,] & "Number=Sing" %in% feat_node[j,]){
+      sumpoint<-sumpoint+0.4}
+  
+    adjmat_net[i,j]<-sumpoint
+    }
+}
+#####################################
 library(GA)
 data("eurodist",package="datasets")
 D<-as.matrix(eurodist)
