@@ -1,0 +1,134 @@
+rm(list = ls(all = TRUE))
+library(readr)
+library(stringr)
+library(coreNLP)
+library(openNLP)
+
+setwd("C:/Users/Mimic03/Documents/GA_AR/Corpus")
+#setwd("C:/Users/Alex/Documents/GA_AR/Corpus")
+filename<-"clean_tweet_input_2.txt"
+clean_input<-paste(scan(filename,what="character",sep=NULL),collapse=" ")
+Encoding(clean_input)<-"UTF-8"
+clean_input<-gsub("<COREF CAD= IDE=>","",clean_input,fixed=TRUE)
+clean_input<-gsub("</coref>","",clean_input,fixed=TRUE)
+library(udpipe)
+#udmodel
+udmodel_spanish<-udpipe_load_model(file="spanish-ud-2.0-170801.udpipe")
+clean_input<-as.vector(clean_input)
+x<-udpipe_annotate(udmodel_spanish,clean_input)
+x<-as.data.frame(x)
+#This function adds the parent info to the annotated data.frame
+x<-cbind_dependencies(x,type=c("parent","child"))
+#####################################################
+##Subset de proper nouns, nouns y pronombres.
+stats<-subset(x,upos %in% c("PROPN","NOUN","PRON"))
+library(dplyr)
+stats_subset<-select(stats,token,upos,feats)
+stats_subset$uid<-sprintf("S%003d", 1:nrow(stats_subset))
+stats_subset<-stats_subset[,c(4,1,2,3)]
+#subset de las primeras 100 filas
+stats_subset2<-stats_subset[1:50,]
+mat<-matrix(1,50,50)
+rownames(mat)<-colnames(mat)<-stats_subset2$uid
+library(igraph)
+g<-graph.adjacency(mat)
+linking<-get.edgelist(g)
+linking<-as.data.frame(linking)
+nodes<-stats_subset2
+linking$token<-nodes$token
+linking$upos<-nodes$upos
+#linking$fromPos<-nodeses$upos
+net<-graph_from_data_frame(d=linking,vertices=nodes,directed=T)
+#we remove loops
+net<-simplify(net,remove.multiple=F,remove.loops=T)  
+plot(net,edge.arrow.size=.1,vertex.label=V(net)$token,vertex.shape="none")
+
+library(stringr)
+#separamos feats y creamos nuevas columnas de ellos 1 a 1
+feat_node<-str_split_fixed(nodes$feats, "\\|", 6)
+feat_node<-sub("^$",NA,feat_node)
+feat_node<-as.data.frame(feat_node,stringsAsFactors=FALSE)
+feat_node$uid<-sprintf("S%003d", 1:nrow(feat_node))
+feat_node<-feat_node[,c(7,1,2,3,4,5,6)]
+colnames(feat_node)<-c("uid","f1","f2","f3","f4","f5","f6")
+linking<-cbind(linking,feat_node)
+colnames(linking)<-c("from","to","token","upos","uid","f1","f2","f3","f4","f5","f6")
+#comparaciones y pesos
+#quizas output deberia ser 2x2 para generar una matrix de adj
+#redefine el valor en la fila 1 columna 2 de la matrix de adj
+#adjmat_net[1,2]<-32
+#crea matrix de adj
+adj_net<-as_adj(net)
+adjmat_net<-as.matrix(adj_net)
+library(svMisc)
+#sumpoint<-0
+for(i in 1:NROW(adjmat_net)){
+  progress(i,progress.bar=TRUE)
+  if(i==NROW(adjmat_net)){cat("Done!\n")}
+  sumpoint<-0
+  for(j in 1:NROW(adjmat_net)){
+    if("Gender=Masc" %in% feat_node[i,] & "Gender=Masc" %in% feat_node[j,]){
+      sumpoint<-sumpoint+0.2
+    }else if("Gender=Fem" %in% feat_node[i,] & "Gender=Fem" %in% feat_node[j,]){
+      sumpoint<-sumpoint+0.2
+    }else if("Number=Plur" %in% feat_node[i,] & "Number=Plur" %in% feat_node[j,]){
+      sumpoint<-sumpoint+0.2
+    }else if("Number=Sing" %in% feat_node[i,] & "Number=Sing" %in% feat_node[j,]){
+      sumpoint<-sumpoint+0.2
+    }else if("Person=0" %in% feat_node[i,] & "Person=0" %in% feat_node[j,]){
+      sumpoint<-sumpoint+0.1
+    }else if("Person=1" %in% feat_node[i,] & "Person=1" %in% feat_node[j,]){
+      sumpoint<-sumpoint+0.1
+    }else if("Person=2" %in% feat_node[i,] & "Person=2" %in% feat_node[j,]){
+      sumpoint<-sumpoint+0.1
+    }else if("Person=3" %in% feat_node[i,] & "Person=3" %in% feat_node[j,]){
+      sumpoint<-sumpoint+0.1
+    }else if("Person=4" %in% feat_node[i,] & "Person=4" %in% feat_node[j,]){
+      sumpoint<-sumpoint+0.1
+    }else if("Relex=Yes" %in% feat_node[i,]){
+      sumpoint<-sumpoint+0.1
+    }else if("PronType=Dem" %in% feat_node[i,]){
+      sumpoint<-sumpoint+0.1
+    }else if("PrepCase=Pre" %in% feat_node[i,]){
+      sumpoint<-sumpoint-0.1
+    }else if("PronType=Neg" %in% feat_node[i,] & "Polarity=Neg" %in% feat_node[j,]){
+      sumpoint<-sumpoint+0.1
+    }else if("PronType=Prs" %in% feat_node[i,]){
+      sumpoint<-sumpoint+0.1
+    }
+    
+    adjmat_net[i,j]<-sumpoint
+  }
+}
+
+#####################################
+library(GA)
+#data("eurodist",package="datasets")
+#D<-as.matrix(eurodist)
+#Function to calculate tour length 
+tourLength <- function(tour, distMatrix) {
+  tour <- c(tour, tour[1])
+  route <- embed(tour, 2)[,2:1]
+  sum(distMatrix[route])
+}
+#Firness function to be maximized
+#tspFitness<-function(tour, ...) 1/tourLength(tour, ...)
+
+GA<-ga(type="permutation",fitness=tourLength,distMatrix=adjmat_net,
+       lower=1,upper=50,popSize=50,maxiter=10000,
+       run=500,pmutation=0.1,pcrossover=0.2,elitism=20,optim=TRUE)
+summary(GA)
+plot(GA)
+#####
+mds<-cmdscale(eurodist)
+x<-mds[, 1]
+y <- -mds[, 2]
+plot(x, y, type = "n", asp = 1, xlab = "", ylab = "")
+abline(h = pretty(range(x), 10), v = pretty(range(y), 10),
+       col = "light gray")
+tour <- GA@solution[1, ]
+tour <- c(tour, tour[1])
+n <- length(tour)
+arrows(x[tour[-n]], y[tour[-n]], x[tour[-1]], y[tour[-1]],
+       length = 0.15, angle = 25, col = "steelblue", lwd = 2)
+text(x, y, labels(eurodist), cex=0.8)
