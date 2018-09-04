@@ -4,8 +4,8 @@ library(stringr)
 library(coreNLP)
 library(openNLP)
 
-#setwd("C:/Users/Mimic03/Documents/GA_AR/Corpus")
-setwd("C:/Users/Alex/Documents/GA_AR/Corpus")
+setwd("C:/Users/Mimic03/Documents/GA_AR/Corpus")
+#setwd("C:/Users/Alex/Documents/GA_AR/Corpus")
 filename<-"clean_tweet_input_2.txt"
 clean_input<-paste(scan(filename,what="character",sep=NULL),collapse=" ")
 Encoding(clean_input)<-"UTF-8"
@@ -27,8 +27,8 @@ stats_subset<-select(stats,token,upos,feats)
 stats_subset$uid<-sprintf("S%003d", 1:nrow(stats_subset))
 stats_subset<-stats_subset[,c(4,1,2,3)]
 #subset de las primeras 100 filas
-stats_subset2<-stats_subset[1:25,]
-mat<-matrix(1,25,25)
+stats_subset2<-stats_subset[1:500,]
+mat<-matrix(1,500,500)
 rownames(mat)<-colnames(mat)<-stats_subset2$uid
 library(igraph)
 g<-graph.adjacency(mat)
@@ -61,27 +61,51 @@ colnames(linking)<-c("from","to","token","upos","uid","f1","f2","f3","f4","f5","
 adj_net<-as_adj(net)
 adjmat_net<-as.matrix(adj_net)
 library(svMisc)
-sumpoint<-0
+#sumpoint<-0
 for(i in 1:NROW(adjmat_net)){
   progress(i,progress.bar=TRUE)
-  if(i==NROW(linking)){cat("Done!\n")}
+  if(i==NROW(adjmat_net)){cat("Done!\n")}
+  sumpoint<-0
   for(j in 1:NROW(adjmat_net)){
     if("Gender=Masc" %in% feat_node[i,] & "Gender=Masc" %in% feat_node[j,]){
-      sumpoint<-sumpoint+0.4
+      sumpoint<-sumpoint+0.2
     }else if("Gender=Fem" %in% feat_node[i,] & "Gender=Fem" %in% feat_node[j,]){
-      sumpoint<-sumpoint+0.4
+      sumpoint<-sumpoint+0.2
     }else if("Number=Plur" %in% feat_node[i,] & "Number=Plur" %in% feat_node[j,]){
-      sumpoint<-sumpoint+0.4
+      sumpoint<-sumpoint+0.2
     }else if("Number=Sing" %in% feat_node[i,] & "Number=Sing" %in% feat_node[j,]){
-      sumpoint<-sumpoint+0.4}
-  
-    adjmat_net[i,j]<-sumpoint
+      sumpoint<-sumpoint+0.2
+    }else if("Person=0" %in% feat_node[i,] & "Person=0" %in% feat_node[j,]){
+      sumpoint<-sumpoint+0.1
+    }else if("Person=1" %in% feat_node[i,] & "Person=1" %in% feat_node[j,]){
+      sumpoint<-sumpoint+0.1
+    }else if("Person=2" %in% feat_node[i,] & "Person=2" %in% feat_node[j,]){
+      sumpoint<-sumpoint+0.1
+    }else if("Person=3" %in% feat_node[i,] & "Person=3" %in% feat_node[j,]){
+      sumpoint<-sumpoint+0.1
+    }else if("Person=4" %in% feat_node[i,] & "Person=4" %in% feat_node[j,]){
+      sumpoint<-sumpoint+0.1
+    }else if("Relex=Yes" %in% feat_node[i,]){
+      sumpoint<-sumpoint+0.1
+    }else if("PronType=Dem" %in% feat_node[i,]){
+      sumpoint<-sumpoint+0.1
+    }else if("PrepCase=Pre" %in% feat_node[i,]){
+      sumpoint<-sumpoint-0.1
+    }else if("PronType=Neg" %in% feat_node[i,] & "Polarity=Neg" %in% feat_node[j,]){
+      sumpoint<-sumpoint+0.1
+    }else if("PronType=Prs" %in% feat_node[i,]){
+      sumpoint<-sumpoint+0.1
     }
+      
+    adjmat_net[i,j]<-sumpoint
+
+  }
 }
+
 #####################################
 library(GA)
-data("eurodist",package="datasets")
-D<-as.matrix(eurodist)
+#data("eurodist",package="datasets")
+#D<-as.matrix(eurodist)
 #Function to calculate tour length 
 tourLength <- function(tour, distMatrix) {
   tour <- c(tour, tour[1])
@@ -89,12 +113,14 @@ tourLength <- function(tour, distMatrix) {
   sum(distMatrix[route])
 }
 #Firness function to be maximized
-tspFitness<-function(tour, ...) 1/tourLength(tour, ...)
-GA<-ga(type="permutation",fitness=tspFitness,distMatrix=D,
-         lower=1,upper=attr(eurodist,"Size"),popSize=50,maxiter=5000,
-         run=500,pmutation=0.2)
-summary(GA)
+#tspFitness<-function(tour, ...) 1/tourLength(tour, ...)
 
+GA<-ga(type="permutation",fitness=tourLength,distMatrix=adjmat_net,
+       lower=1,upper=500,popSize=100,maxiter=1000,
+       run=500,pmutation=0.9,pcrossover=0.9,monitor=plot)
+summary(GA)
+plot(GA)
+#####
 mds<-cmdscale(eurodist)
 x<-mds[, 1]
 y <- -mds[, 2]
